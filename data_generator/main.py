@@ -30,13 +30,12 @@ def fetch_existing_ids(table_name, column_name):
 
 
 # Function to generate orders data
-def generate_orders_data(customer_ids, shipper_ids):
+def generate_orders_data(customer_ids):
     orders_data = []
     for _ in range(NUM_ORDERS):
         orders_data.append({
             'customer_id': random.choice(customer_ids),
             'ordered_at': fake.date_time_between(start_date='-1y', end_date='now'),
-            'shipper_id': random.choice(shipper_ids)
         })
     return pd.DataFrame(orders_data)
 
@@ -56,7 +55,7 @@ def generate_orders_details_data(order_ids, product_ids):
 
 
 # Function to generate deliveries data
-def generate_deliveries_data(order_ids):
+def generate_deliveries_data(order_ids, shipper_ids):
     delivery_statuses = [
         'In Transit', 'Arrived at Overseas', 'Item is Pre-Advised', 'Poste Restante',
         'Arrival Scan', 'Redirected', 'Out for Delivery', 'Cleared Customs',
@@ -68,6 +67,7 @@ def generate_deliveries_data(order_ids):
         for _ in range(num_statuses):
             deliveries_data.append({
                 'order_id': order_id,
+                'shipper_id': random.choice(shipper_ids),
                 'status': random.choice(delivery_statuses),
                 'description': fake.text(max_nb_chars=200),
                 'location': fake.city(),
@@ -90,14 +90,14 @@ def main():
 
     while True:
         # Generate data
-        df_orders = generate_orders_data(customer_ids, shipper_ids)
+        df_orders = generate_orders_data(customer_ids)
         insert_data_to_sql(df_orders, 'orders')
 
         order_ids = fetch_existing_ids('orders', 'id')
         df_orders_details = generate_orders_details_data(order_ids, product_ids)
         insert_data_to_sql(df_orders_details, 'orders_details')
 
-        df_deliveries = generate_deliveries_data(order_ids)
+        df_deliveries = generate_deliveries_data(order_ids, shipper_ids)
         insert_data_to_sql(df_deliveries, 'deliveries')
 
         # Wait for a random delay
