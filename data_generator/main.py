@@ -3,12 +3,19 @@ import random
 import pandas as pd
 from sqlalchemy import create_engine
 from faker import Faker
+import psycopg2
 
 # Constants
 DATABASE_URL = 'postgresql://postgres:1234@localhost:5432/postgres'
 NUM_ORDERS = 10  # Number of orders to generate
 MIN_DELAY_MS = 1000
 MAX_DELAY_MS = 1500
+
+# Database connection parameters
+HOST = "localhost"
+DATABASE = "postgres"
+USER = "postgres"
+PASSWORD = "1234"
 
 # Initialize Faker
 fake = Faker()
@@ -40,18 +47,26 @@ def generate_orders_data(customer_ids):
     return pd.DataFrame(orders_data)
 
 
+
 # Function to generate orders details data
-def generate_orders_details_data(order_ids, product_ids):
+def generate_orders_details_data(order_ids, product_ids) -> tuple:
     orders_details_data = []
+    products_data = []
     for order_id in order_ids:
         for _ in range(random.randint(1, 5)):  # Each order can have 1 to 5 products
+            product_id = random.choice(product_ids)
+            item_qty = random.randint(1, 10)
+            products_data.append({
+                'id': product_id,
+                'quantity': item_qty
+            })
             orders_details_data.append({
                 'order_id': order_id,
-                'product_id': random.choice(product_ids),
-                'item_qty': random.randint(1, 10),
+                'product_id': product_id,
+                'item_qty': item_qty,
                 'last_updated': fake.date_time_between(start_date='-1y', end_date='now')
             })
-    return pd.DataFrame(orders_details_data)
+    return pd.DataFrame(orders_details_data), pd.DataFrame(products_data)
 
 
 # Function to generate deliveries data
@@ -82,8 +97,31 @@ def insert_data_to_sql(df, table_name):
     df.to_sql(name=table_name, con=engine, if_exists='append', index=False)
 
 
+def update_data_in_product_table(df, cursor):
+    for index, row in df.iterrows():
+        product_id = int(row['id'])
+        quantity = int(row['quantity'])
+
+        # Update the products table
+        update_query = """
+        UPDATE products
+        SET stock_qty = stock_qty - %s
+        WHERE id = %s
+        """
+        cursor.execute(update_query, (quantity, product_id))
+    print(df.count())
+
 # Main function to generate and insert data
 def main():
+    # Connect to the PostgreSQL database
+    conn = psycopg2.connect(
+        host=HOST,
+        database=DATABASE,
+        user=USER,
+        password=PASSWORD
+    )
+    cursor = conn.cursor()
+
     customer_ids = fetch_existing_ids('customers', 'id')
     shipper_ids = fetch_existing_ids('shippers', 'id')
     product_ids = fetch_existing_ids('products', 'id')
@@ -94,11 +132,14 @@ def main():
         insert_data_to_sql(df_orders, 'orders')
 
         order_ids = fetch_existing_ids('orders', 'id')
-        df_orders_details = generate_orders_details_data(order_ids, product_ids)
+        df_orders_details, df_products = generate_orders_details_data(order_ids, product_ids)
         insert_data_to_sql(df_orders_details, 'orders_details')
 
         df_deliveries = generate_deliveries_data(order_ids, shipper_ids)
         insert_data_to_sql(df_deliveries, 'deliveries')
+
+        update_data_in_product_table(df_products, cursor)
+
 
         # Wait for a random delay
         random_delay(MIN_DELAY_MS, MAX_DELAY_MS)
