@@ -6,6 +6,8 @@ CREATE SEQUENCE products_id_seq;
 CREATE SEQUENCE shippers_id_seq;
 CREATE SEQUENCE orders_id_seq;
 CREATE SEQUENCE deliveries_id_seq;
+CREATE SEQUENCE supplies_id_seq;
+CREATE SEQUENCE warehouses_id_seq;
 
 -- Create the tables
 
@@ -23,7 +25,7 @@ CREATE TABLE customers (
 CREATE TABLE categories (
   id INTEGER PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
-  image_url varchar(255),
+  image_url VARCHAR(255),
   description TEXT,
   last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -59,8 +61,7 @@ CREATE TABLE shippers (
 CREATE TABLE orders (
   id INTEGER DEFAULT nextval('orders_id_seq') PRIMARY KEY,
   customer_id INTEGER REFERENCES customers(id),
-  ordered_at TIMESTAMP NOT NULL,
-  shipper_id INTEGER REFERENCES shippers(id)
+  ordered_at TIMESTAMP NOT NULL
 );
 
 CREATE TABLE orders_details (
@@ -71,10 +72,10 @@ CREATE TABLE orders_details (
   PRIMARY KEY (order_id, product_id)
 );
 
-
 CREATE TABLE deliveries (
   id INTEGER DEFAULT nextval('deliveries_id_seq') PRIMARY KEY,
   order_id INTEGER REFERENCES orders(id),
+  shipper_id INTEGER REFERENCES shippers(id),
   status VARCHAR(50) NOT NULL,
   description TEXT,
   location VARCHAR(100),
@@ -82,16 +83,25 @@ CREATE TABLE deliveries (
   last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+
 -- Add foreign key constraints (already specified in REFERENCES above)
 
-ALTER TABLE orders
-  ADD CONSTRAINT fk_orders_customer FOREIGN KEY (customer_id) REFERENCES customers(id),
-  ADD CONSTRAINT fk_orders_shipper FOREIGN KEY (shipper_id) REFERENCES shippers(id);
-
-ALTER TABLE orders_details
-  ADD CONSTRAINT fk_order_details_order FOREIGN KEY (order_id) REFERENCES orders(id),
-  ADD CONSTRAINT fk_order_details_product FOREIGN KEY (product_id) REFERENCES products(id);
-
-ALTER TABLE products
-  ADD CONSTRAINT fk_products_category FOREIGN KEY (category_id) REFERENCES categories(id),
-  ADD CONSTRAINT fk_products_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id);
+-- ALTER TABLE orders
+--   ADD CONSTRAINT fk_orders_customer FOREIGN KEY (customer_id) REFERENCES customers(id),
+--   ADD CONSTRAINT fk_orders_shipper FOREIGN KEY (shipper_id) REFERENCES shippers(id);
+--
+-- ALTER TABLE orders_details
+--   ADD CONSTRAINT fk_order_details_order FOREIGN KEY (order_id) REFERENCES orders(id),
+--   ADD CONSTRAINT fk_order_details_product FOREIGN KEY (product_id) REFERENCES products(id);
+--
+-- ALTER TABLE products
+--   ADD CONSTRAINT fk_products_category FOREIGN KEY (category_id) REFERENCES categories(id),
+--   ADD CONSTRAINT fk_products_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id);
+--
+-- ALTER TABLE supplies
+--   ADD CONSTRAINT fk_supplies_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id),
+--   ADD CONSTRAINT fk_supplies_product FOREIGN KEY (product_id) REFERENCES products(id);
+--
+-- ALTER TABLE storage
+--   ADD CONSTRAINT fk_storage_warehouse FOREIGN KEY (warehouse_id) REFERENCES warehouses(id),
+--   ADD CONSTRAINT fk_storage_product FOREIGN KEY (product_id) REFERENCES products(id);
